@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 .idea
-.result_file
+.result_file/
