@@ -1,20 +1,19 @@
 class Stock:
-    def __init__(self, name, code, fullcode, index, price, per, eps, nearest_month, industry_code, trading_amount_ratio, industry_per_static):
+    def __init__(self, name, code, price, per, eps, bps, pbr, gp_a, nearest_month, industry_code, trading_amount_ratio, industry_per_static, beta):
         self.__name = name
         self.__code = code
-        self.__fullcode = fullcode
-        self.__index = index
+        self.__code_pdreader = f'{code[-6:]}.KS'
         self.__price = price
         self.__per = per
         self.__eps = eps
+        self.__bps = bps
+        self.__pbr = pbr
+        self.__gp_a = gp_a
         self.__nearest_month = nearest_month
         self.__industry_code = industry_code
         self.__trading_amount_ratio = trading_amount_ratio
         self.__industry_per_static = industry_per_static
-
-    @property
-    def index(self):
-        return self.__index
+        self.__beta = beta
 
     @property
     def name(self):
@@ -25,8 +24,8 @@ class Stock:
         return self.__code
 
     @property
-    def fullcode(self):
-        return self.__fullcode
+    def code_pdreader(self):
+        return self.__code_pdreader
 
     @property
     def price(self):
@@ -39,6 +38,18 @@ class Stock:
     @property
     def eps(self):
         return self.__eps
+
+    @property
+    def bps(self):
+        return self.__bps
+
+    @property
+    def pbr(self):
+        return self.__pbr
+
+    @property
+    def gp_a(self):
+        return self.__gp_a
 
     @property
     def nearest_month(self):
@@ -64,11 +75,14 @@ class Stock:
     def industry_min_per(self):
         return self.__industry_per_static['min']
 
+    @property
+    def beta(self):
+        return self.__beta
+
     def __repr__(self):
-        return str({'index': self.index,
-                    'name' : self.name,
-                    'code' : self.code,
-                    'fullcode': self.fullcode,
+        return str({
+                    'name': self.name,
+                    'code': self.code,
                     'price': self.price,
                     'PER': self.per,
                     'EPS': self.eps,
@@ -78,4 +92,5 @@ class Stock:
                     'industry_mean_per': self.industry_mean_per,
                     'industry_max_per': self.industry_max_per,
                     'industry_min_per': self.industry_min_per,
+                    'beta': self.beta
                     })

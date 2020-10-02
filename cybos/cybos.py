@@ -1,11 +1,12 @@
 from util.singleton import Singleton
 import win32com.client as client
+from pdreader.pdnaver import PDNaver
 from VO.stock import Stock
 from VO.chart import Chart
 from constant.constant import SECTION_KIND_SHARE, SECTION_KIND_ETN, SECTION_KIND_PRESENT
 from constant.constant import STOCKCHART_DAY_CODE, STOCKCHART_OPENING_QUTATION_CODE, STOCKCHART_CLOSING_QUTATION_CODE, STOCKCHART_HIGHEST_QUTATION_CODE, STOCKCHART_LOWEST_QUTATION_CODE, STOCKCHART_TRADING_QUTATION_CODE
 from constant.constant import STOCKCHART_CHARTTYPE_DAY_CODE
-from constant.constant import MARKETEYE_PRICE_CODE, MARKETEYE_PER_CODE, MARKETEYE_EPS_CODE, MARKETEYE_NEAREST_MONTH_CODE
+from constant.constant import MARKETEYE_PRICE_CODE, MARKETEYE_PER_CODE, MARKETEYE_EPS_CODE, MARKETEYE_NEAREST_MONTH_CODE, MARKETEYE_BPS_CODE, MARKETEYE_REAL_PROFIT, MARKETEYE_CAPITAL, MARGETEYE_DEPT_RATIO
 from constant.constant import TRADE_TYPE_DESIGNATION, TRADE_TYPE_BEST, TRADE_TYPE_FIRST
 import numpy as np
 
@@ -23,8 +24,12 @@ class Cybos(Singleton):
         MARKETEYE_PRICE_CODE,
         MARKETEYE_PER_CODE,
         MARKETEYE_EPS_CODE,
-        MARKETEYE_NEAREST_MONTH_CODE
-    )
+        MARKETEYE_NEAREST_MONTH_CODE,
+        MARKETEYE_BPS_CODE,
+        MARKETEYE_REAL_PROFIT,
+        MARKETEYE_CAPITAL,
+        MARGETEYE_DEPT_RATIO
+    ) # CONSTANT의 INT값에 따른 오름차순으로 값이 반환됨
     def __init__(self):
         self.__cybos = client.Dispatch('CpUtil.CpCybos')
         self.__stockcode = client.Dispatch('CpUtil.CpStockCode')
@@ -33,6 +38,7 @@ class Cybos(Singleton):
         self.__marketeye = client.Dispatch('CpSysDib.MarketEye')
         self.__stock_code_list = None
         self.__industry_per_memory = dict()
+        self.__pdnaver = PDNaver()
 
     def isconnect_cybos(self):
         return self.__cybos.IsConnect
@@ -40,14 +46,19 @@ class Cybos(Singleton):
     def get_stock_by_idx(self, idx):
         name = self.__stockcode.GetData(1, idx)
         code = self.__stockcode.GetData(0, idx)
-        fullcode = self.__stockcode.GetData(2, idx)
         self.__marketeye.SetInputValue(0, self.MARKETEYE_TYPE)
         self.__marketeye.SetInputValue(1, code)
         self.__marketeye.BlockRequest()
         price = self.__marketeye.GetDataValue(0, 0)
         per = self.__marketeye.GetDataValue(1, 0)
         eps = self.__marketeye.GetDataValue(2, 0)
-        nearest_month = self.__marketeye.GetDataValue(3, 0)
+        nearest_month = self.__marketeye.GetDataValue(7, 0)
+        bps = self.__marketeye.GetDataValue(5, 0)
+        real_profit = self.__marketeye.GetDataValue(6, 0)
+        capital = self.__marketeye.GetDataValue(3, 0)
+        dept = self.__marketeye.GetDataValue(4, 0)
+        total_assets = (float(dept) + 1) * int(capital)
+        gp_a = real_profit / total_assets
         industry_code = self.__codemgr.GetStockIndustryCode(code)
         try:
             industry_per = self.__industry_per_memory[industry_code]
@@ -55,7 +66,12 @@ class Cybos(Singleton):
             self.__industry_per_memory[industry_code] = self.get_industry_per_static(industry_code)
             industry_per = self.__industry_per_memory[industry_code]
         trading_amount_ratio = self.get_tarding_amount_ratio(code)
-        stock = Stock(name, code, fullcode, idx, price, per, eps, nearest_month, industry_code, trading_amount_ratio, industry_per)
+        beta = self.__pdnaver.get_beta_by_code(code[-6:])
+        if bps == 0:
+            pbr = 0
+        else:
+            pbr = price/bps
+        stock = Stock(name, code, price, per, eps, bps, pbr, gp_a, nearest_month, industry_code, trading_amount_ratio, industry_per, beta)
         return stock
 
     def get_stock_by_name(self, name):
@@ -149,6 +165,8 @@ class Cybos(Singleton):
     def get_industry_per_static(self, industry_group_code):
         code_list = self.get_code_list_by_groupcode(industry_group_code)
         self.__marketeye.SetInputValue(0, MARKETEYE_PER_CODE)
+        if len(code_list) >= 200:
+            code_list = code_list[0:200]
         self.__marketeye.SetInputValue(1, code_list)
         self.__marketeye.BlockRequest()
         per_list = np.asarray([self.__marketeye.GetDataValue(0, i) for i in range(self.__marketeye.GetHeaderValue(2))])

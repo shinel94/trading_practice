@@ -54,14 +54,11 @@ cybos = Cybos()
 from time import sleep
 count = 0
 with open('C:/Users/HY/Desktop/TradingPractice/trading_practice/result_file/kospi.csv', 'w', encoding='utf-8') as f:
-    f.write(f'index, name, code, price, PER, EPS, 최근분기년월, 최근거래량증가비율, 산업평균per, 산업per최대, 산업per최소\n')
-    for code in cybos.get_share_code_list_all():
+    f.write(f'name, code, code_pdreader, price, PER, EPS, BPS, PBR, GP/A 최근분기년월, 최근거래량증가비율, 산업평균per, 산업per최대, 산업per최소, beta\n')
+    for code in tqdm(cybos.get_share_code_list_all()):
         stock = cybos.get_stock_by_code(code)
-        f.write(f'{stock.index}, {stock.name}, {stock.code}, {stock.price}, {stock.per}, {stock.eps}, {stock.nearest_month}, {stock.trading_amount_ratio}, {stock.industry_mean_per}, {stock.industry_max_per}, {stock.industry_min_per}\n')
-        sleep(0.1)
-        count += 1
-        if count > 100:
-            break
+        f.write(f'{stock.name},{stock.code},{stock.code_pdreader},{stock.price},{stock.per},{stock.eps},{stock.bps},{stock.pbr},{stock.gp_a},{stock.nearest_month},{stock.trading_amount_ratio},{stock.industry_mean_per},{stock.industry_max_per},{stock.industry_min_per},{stock.beta}\n')
+        # sleep(0.333)
     f.close()
 
 # print(cybos.get_industry_code_list())
